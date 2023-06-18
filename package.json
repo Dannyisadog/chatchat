@@ -4,6 +4,7 @@
   "description": "A anonymous chat application",
   "main": "index.js",
   "scripts": {
+    "start": "nodemon index.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "repository": {
@@ -19,5 +20,11 @@
   "bugs": {
     "url": "https://github.com/Dannyisadog/chatchat/issues"
   },
-  "homepage": "https://github.com/Dannyisadog/chatchat#readme"
+  "homepage": "https://github.com/Dannyisadog/chatchat#readme",
+  "dependencies": {
+    "express": "^4.18.2",
+    "nodemon": "^2.0.22",
+    "redis": "^4.6.7",
+    "socket.io": "^4.6.2"
+  }
 }
