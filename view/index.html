@@ -151,7 +151,9 @@
             }
             input.value = "";
           } else if (matchStatus == 'pending') {
+            const matchButton = document.querySelector(".match-button");
             matchStatus = 'matching';
+            matchButton.value = "配對中";
             socket.emit(userId, {
               action: 'match',
             });
