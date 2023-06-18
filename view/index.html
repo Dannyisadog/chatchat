@@ -15,34 +15,99 @@
     }
     body {
       margin: 0;
+      background-color: #3fb3fb;
+      background: linear-gradient(135deg, #3fb3fb 0%, #002b4d 100%);
     }
     .container {
+      background: white;
       position: relative;
-      width: 100vw;
+      max-width: 500px;
+      margin: 0 auto;
       height: 100vh;
+      padding: 24px;
+      border-radius: 48px;
     }
 
     #submit-form {
       position: absolute;
-      bottom: 0;
-      left: 0;
+      bottom: 20px;
       width: 100%;
-      height: 60px;
+      padding-left: 40px;
+      padding-right: 40px;
+      display: flex;
+      justify-content: center;
+      left: 0;
+      height: 40px;
       display: flex;
     }
 
     .message-input,
     .submit {
       height: 100%;
+      border-radius: 20px;
     }
 
     .message-input {
       font-size: 18px;
-      width: 100%;
+      width: 90%;
+      border: 1px solid #aaaaaa;
+      padding-left: 16px;
+      color: #333;
     }
 
     .submit {
+      margin-left: 20px;
+      width: 100px;
+      font-size: 16px;
+      border: none;
+      cursor: pointer;
+    }
+
+    .message-item {
+      height: 45px;
+      padding: 8px;
+      display: flex;
+      align-items: center;
+      margin: 16px 16px 0 16px;
+      border-radius: 12px;
+      color: white;
+    }
+
+    .left-message-item {
+      justify-content: start;
+    }
+
+    .right-message-item {
+      justify-content: end;
+    }
+
+    .message {
+      padding: 8px 16px;
+      border-radius: 16px;
+    }
+
+    .sender-message {
+      background-color: #002b4d;
+    }
+
+    .my-message {
+      background-color: #3fb3fb;
+    }
+
+    .match-button {
+      font-size: 18px;
+      width: 90%;
+      border: none;
+      background-color: #ffa323;
+      border-radius: 24px;
+      color: white;
       width: 120px;
+      cursor: pointer;
+    }
+
+    .message-wrapper {
+      height: 88vh;
+      overflow-y: scroll;
     }
   </style>
 </head>
@@ -53,32 +118,44 @@
 
     </div>
     <form id="submit-form">
-      <input type="text" class="message-input">
-      <input type="submit" value="send" class="submit">
+      <input hidden type="text" class="message-input">
+      <input hidden type="submit" value="送出" class="submit">
+      <input type="submit" value="配對" class="match-button">
     </form>
   </div>
   <script>
     const main = async () => {
       let userId;
       let roomId;
-      const socket = io("http://localhost:3000");
+      let matchStatus = "pending";
+      const socket = io();
       const messageWrapper = document.querySelector(".message-wrapper");
 
       const bindInputEvent = () => {
         const form = document.querySelector("#submit-form");
         form.addEventListener('submit', (e) => {
-          const input = document.querySelector(".message-input");
-          const message = input.value;
-          socket.emit(userId, message);
-          if (roomId) {
-            console.log("emit to room: ", roomId);
-            socket.emit(roomId, {
-              event: 'message',
-              message,
-              sender: userId
+          if (matchStatus == 'matched') {
+            const input = document.querySelector(".message-input");
+            const message = input.value;
+
+            if (message === '') return;
+
+            socket.emit(userId, message);
+            if (roomId) {
+              console.log("emit to room: ", roomId);
+              socket.emit(roomId, {
+                event: 'message',
+                message,
+                sender: userId
+              });
+            }
+            input.value = "";
+          } else if (matchStatus == 'pending') {
+            matchStatus = 'matching';
+            socket.emit(userId, {
+              action: 'match',
             });
           }
-          input.value = "";
           e.preventDefault();
         })
       }
@@ -88,24 +165,45 @@
         userId = `${socket.id}`;
 
         console.log(userId);
-
         socket.emit(userId, "connected");
 
         socket.on(userId, (event) => {
           const { action } = event;
           if (action == 'matched') {
             console.log("room id: " + event.roomId);
+            const input = document.querySelector(".message-input");
+            const submit = document.querySelector(".submit");
+            const matchButton = document.querySelector(".match-button");
+
+            matchStatus = 'matched';
+
+            input.hidden = false;
+            submit.hidden = false;
+            matchButton.hidden = true;
+
             socket.emit(userId, {
               action: 'registerRoom',
               roomId: event.roomId,
             });
             socket.on(event.roomId, (roomEvent) => {
               const {sender, message} = roomEvent;
-              console.log(messageWrapper);
+              const messageContainer = document.createElement("div");
               const messageNode = document.createElement("div");
-              messageNode.classList.add("message-item");
-              messageNode.innerText = `${sender}: ${message}`;
-              messageWrapper.appendChild(messageNode);
+              messageContainer.classList.add("message-item");
+              messageNode.classList.add("message");
+
+              if (sender === userId) {
+                messageContainer.classList.add("right-message-item");
+                messageNode.classList.add("my-message");
+              } else {
+                messageContainer.classList.add("left-message-item");
+                messageNode.classList.add("sender-message");
+              }
+              messageNode.innerText = message;
+              messageContainer.appendChild(messageNode);
+              messageWrapper.appendChild(messageContainer);
+            
+              messageWrapper.scrollTo(0, messageWrapper.scrollHeight);
             })
             roomId = event.roomId.trim();
           }

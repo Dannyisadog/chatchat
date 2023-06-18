@@ -7,7 +7,6 @@ const io = new Server(server);
 const { createClient } = require('redis');
 const redis = createClient();
 
-const USER_PREFIX = "user/";
 const ROOM_PREFIX = "room/";
 
 const main = async () => {
@@ -44,12 +43,8 @@ const main = async () => {
 
   io.on('connection', async (socket) => {
     const userId = `${socket.id}`;
-    await redis.lPush('users', userId);
-    await socket.join(userId);
 
-    match(socket);
-
-    socket.on(userId, (event) => {
+    socket.on(userId, async (event) => {
       socket.emit(userId, event);
       console.log(event);
       if (event?.action == 'registerRoom') {
@@ -57,6 +52,12 @@ const main = async () => {
         socket.on(roomId, (roomEvent) => {
           io.emit(roomId, roomEvent);
         })
+      }
+
+      if (event?.action == 'match') {
+        await redis.lPush('users', userId);
+        await socket.join(userId);
+        match(socket);
       }
     })
 
